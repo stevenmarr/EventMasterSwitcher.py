@@ -1,15 +1,5 @@
 # EventMasterSwitcher Library for E2/S3
 
-# Example:
-#
-#    import EventMasterSwitcher
-#    d = EventMasterSwitcher.EventMasterSwitcher(ip="1.2.3.4")
-#
-#    r = d.listPresets()
-#    if "err" in r: return r["humanized"]
-#
-#    print(r)
-
 import requests
 import json
 from threading import Timer
