@@ -8,50 +8,7 @@ import socket
 import xmltodict
 
 class EventMasterSwitcher:
-
-    global TESTPATTERNMODE_OFF
-    global TESTPATTERNMODE_HRAMP
-    global TESTPATTERNMODE_VRAMP
-    global TESTPATTERNMODE_CBAR100
-    global TESTPATTERNMODE_GRID16
-    global TESTPATTERNMODE_GRID32
-    global TESTPATTERNMODE_BURST
-    global TESTPATTERNMODE_CBAR75
-    global TESTPATTERNMODE_GRAY50
-    global TESTPATTERNMODE_HSTEPS
-    global TESTPATTERNMODE_VSTEPS
-    global TESTPATTERNMODE_WHITE
-    global TESTPATTERNMODE_BLACK
-    global TESTPATTERNMODE_SMPTE
-    global TESTPATTERNMODE_HALIGN
-    global TESTPATTERNMODE_VALIGN
-    global TESTPATTERNMODE_HVALIGN
-    TESTPATTERNMODE_OFF = 0
-    TESTPATTERNMODE_HRAMP = 1
-    TESTPATTERNMODE_VRAMP = 2
-    TESTPATTERNMODE_CBAR100 = 3
-    TESTPATTERNMODE_GRID16 = 4
-    TESTPATTERNMODE_GRID32 = 5
-    TESTPATTERNMODE_BURST = 6
-    TESTPATTERNMODE_CBAR75 = 7
-    TESTPATTERNMODE_GRAY50 = 8
-    TESTPATTERNMODE_HSTEPS = 9
-    TESTPATTERNMODE_VSTEPS = 10
-    TESTPATTERNMODE_WHITE = 11
-    TESTPATTERNMODE_BLACK = 12
-    TESTPATTERNMODE_SMPTE = 13
-    TESTPATTERNMODE_HALIGN = 14
-    TESTPATTERNMODE_VALIGN = 15
-    TESTPATTERNMODE_HVALIGN = 16
-    
-    global VF_LIST
-    VF_LIST = [{"Name": "1280x720p @50"},
-               {"Name": "1280x720p @59.94"},
-               {"Name": "1280x720p @60"},
-               {"Name": "1920x1080p @50"},
-               {"Name": "1920x1080p @59.94"},
-               {"Name": "1920x1080p @60"}]
-               
+             
     ip = False
     discovered = {}
     sock_discovery = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -158,17 +115,13 @@ class EventMasterSwitcher:
     
         try:
             sock_9878.connect(addr)
-            
         except socket.error as msg:
             return {"err": True,
                     "humanized": "Error connecting to switcher {0!s}:{1!s}- {2!s}".format(addr[0], addr[1], msg)}
-            
+     
         try:
             sock_9878.send(encoded_command)
-            print(encoded_command)
-            print('sent')
         except socket.error as msg:
-            print('err2')
             return {"error": "Error sending command to {0!s}:{1!s}- {2!s}".format(msg)}
             
         data = sock_9878.recv(1024)
@@ -181,11 +134,8 @@ class EventMasterSwitcher:
     def _net9878Node(self, path, set=None):
         if set is None:
             request = "NODE -p {0!s}".format(path)
-            print("Node Request Get")
         else:
             request = "NODE -p {0!s} -v {1!s}".format(path, set)
-            print("Node Request Set")
-        
         
         try:
             return_xml = self._net9878Request(request)
@@ -280,7 +230,6 @@ class EventMasterSwitcher:
     def getFrameSettings(self):
         method = "getFrameSettings"
         return_json = self._net9999Request(method)
-        print("{0!s}".format(return_json))
         if "error" not in return_json:
             self.version = return_json['result']['result']['System']['FrameCollection']['Frame']['Version']
         return return_json
@@ -297,28 +246,6 @@ class EventMasterSwitcher:
     def doSave(self):
         command = "SAVE"
         self._net9878Request(command)
-        
-    def getInputEDID(self):
-        
-        edid_results = []
-        i=0
-        fs = self.getFrameSettings()
-        for slot in fs['result']['result']['System']['FrameCollection']['Frame']['Slot']:
-            if(slot['Card']['CardTypeID']==2):
-                for j in range(0,3):
-                    edid_results.append({"Slot": int(i+1), "Col": j, "EDID": "EDIDIN -s {0!s} -c {1!s}".format(int(i+1), j)})
-            i+= 1
-                
-                
-        #return self._net9878Request("EDIDIN -s {0!s} -c {1!s}".format(int(slot), int(col)))
-
-    def setInputEDID(self, slot, col, edid_string):
-        print("EDIDIN -s {0!s} -c {1!s} -f \"{2!s}\"".format(int(slot), int(col), edid_string))
-        #return self._net9878Request("EDIDIN -s {0!s} -c {1!s}".format(int(slot), int(col)))
-
-    def getOutputEDID(self, slot, col, edid_string):
-        print("EDIDOUT -s {0!s} -c {1!s}".format(int(slot), int(col)))
-        #return self._net9878Request("EDIDIN -s {0!s} -c {1!s}".format(int(slot), int(col)))
 
     ''' Stills Methods '''
     
@@ -360,7 +287,6 @@ class EventMasterSwitcher:
         if aux_id is None or source_id is None: return False
 
         return_json = self._net9999Request(method, params)
-        print(return_json)
         return return_json
         
     def doAuxDestinationChangeSourceOnPvw(self, aux_id=None, source_id=None):
@@ -372,7 +298,6 @@ class EventMasterSwitcher:
         if aux_id is None or source_id is None: return False
 
         return_json = self._net9999Request(method, params)
-        print(return_json)
         return return_json      
         
     def getAuxDestinationSource(self, aux_id=None):
@@ -382,220 +307,7 @@ class EventMasterSwitcher:
                   
         if aux_id is None: return False
         return_json = self._net9999Request(method, params)
-        return return_json  
-        
-    def doScreenDestinationChangeBackgroundSource(self, screen_id=None, source_id=None, matte=None):
-        ''' Change Background $source_id onto Screen $screen_id '''
-        # Switches on both PGM and PVW... change to check which layer is on PVW/PGM and
-        # switch approprately.
-        method = "changeContent"
-        params = {"id": screen_id,
-                  "BGLyr": [{"id": 0}, {"id": 1}]}
-                         
-        if matte is True:
-            params["BGLyr"][0]["BGShowMatte"] = 1
-            params["BGLyr"][1]["BGShowMatte"] = 1
-         
-        if matte is False:
-            params["BGLyr"][0]["BGShowMatte"] = 0
-            params["BGLyr"][1]["BGShowMatte"] = 0
-             
-        if source_id is not None:
-            params["BGLyr"][0]["LastBGSourceIndex"] = source_id
-            params["BGLyr"][1]["LastBGSourceIndex"] = source_id
-             
-        if screen_id is None or (source_id is None and matte is None): return False
-        return_json = self._net9999Request(method, params)
-        return return_json        
-                
-    def doScreenDestinationChangeBackgroundMatte(self, red=None, green=None, blue=None):
-        ''' Change Background Matte Color $red $green $blue onto Screen $screen_id '''
-        # Switches on both PGM and PVW... change to check which layer is on PVW/PGM and
-        # switch approprately.
-        method = "changeContent"
-        params = {"id": screen_id,
-                  "BGLyr": [{"id": 0,
-                             "BGColor": source_id},
-                            {"id": 1,
-                             "LastBGSourceIndex": source_id}]}
-         
-        if screen_id is None or red is None or green is None or blue is None: return False
-        return_json = self._net9999Request(method, params)
-        return return_json
-
-    def doScreenDestinationChangeLayerSource(self, screen_id=None, layer_id=None, source_id=None):
-        ''' Change Layer $layer_id for Screen $screen_id to Source $source_id '''
-        # Switches on both PGM and PVW... change to check which layer is on PVW/PGM and
-        # switch approprately.
-        # Does not support Split Mode. Should Check if in split mode
-        # and not use absolute_layer_id!
-        
-        absolute_layer_id = layer_id * 2
-        
-        method = "changeContent"
-        params = {"id": screen_id,
-                  "Layers": [{"id": absolute_layer_id,
-                              "LastSrcIdx": source_id},
-                              {"id": absolute_layer_id+1,
-                              "LastSrcIdx": source_id}]}
-         
-        if screen_id is None or layer_id is None or source_id is None: return False
-        return_json = self._net9999Request(method, params)
-        return return_json     
-           
-    def doScreenDestinationChangeLayerOuterWindow(self, screen_id=None, layer_id=None, 
-                                                  hpos=None, vpos=None, hsize=None, 
-                                                  vsize=None):
-        ''' Change Layer OWIN $hpos $vpos $hsize $vsize for Screen $screen_id Layer $layer_id '''
-        # Switches on both PGM and PVW... change to check which layer is on PVW/PGM and
-        # switch approprately.
-        # Does not support Split Mode. Should Check if in split mode
-        # and not use absolute_layer_id!
-        
-        absolute_layer_id = layer_id * 2
-        
-        method = "changeContent"
-        params = {"id": screen_id,
-                  "Layers": [{"id": absolute_layer_id,
-                              "Window": {}}, 
-                             {"id": absolute_layer_id+1,
-                              "Window": {}}]}
-         
-        if hpos is not None:
-            params["Layers"][0]["Window"]["HPos"] = source_id
-            params["Layers"][1]["Window"]["HPos"] = source_id
-        
-        if vpos is not None:
-            params["Layers"][0]["Window"]["VPos"] = source_id
-            params["Layers"][1]["Window"]["VPos"] = source_id
-        
-        if hsize is not None:
-            params["Layers"][0]["Window"]["HSize"] = source_id
-            params["Layers"][1]["Window"]["HSize"] = source_id
-        
-        if vsize is not None:
-            params["Layers"][0]["Window"]["VSize"] = source_id
-            params["Layers"][1]["Window"]["VSize"] = source_id
-         
-        if screen_id is None or layer_id is None: return False
-        return_json = self._net9999Request(method, params)
-        return return_json                           
-
-    def doScreenDestinationChangeLayerInnerWindow(self, screen_id=None, layer_id=None, 
-                                                  hpos=None, vpos=None, hsize=None, 
-                                                  vsize=None):
-        ''' Change Layer IWIN $hpos $vpos $hsize $vsize for Screen $screen_id Layer $layer_id '''
-        # Switches on both PGM and PVW... change to check which layer is on PVW/PGM and
-        # switch approprately.
-        # Does not support Split Mode. Should Check if in split mode
-        # and not use absolute_layer_id!
-        
-        absolute_layer_id = layer_id * 2
-        
-        method = "changeContent"
-        params = {"id": screen_id,
-                  "Layers": [{"id": absolute_layer_id,
-                              "Source": {}}, 
-                             {"id": absolute_layer_id+1,
-                              "Source": {}}]}
-         
-        if hpos is not None:
-            params["Layers"][0]["Source"]["HPos"] = source_id
-            params["Layers"][1]["Source"]["HPos"] = source_id
-        
-        if vpos is not None:
-            params["Layers"][0]["Source"]["VPos"] = source_id
-            params["Layers"][1]["Source"]["VPos"] = source_id
-        
-        if hsize is not None:
-            params["Layers"][0]["Source"]["HSizeI"] = source_id
-            params["Layers"][1]["Source"]["HSize"] = source_id
-        
-        if vsize is not None:
-            params["Layers"][0]["Source"]["VSize"] = source_id
-            params["Layers"][1]["Source"]["VSize"] = source_id
-         
-        if screen_id is None or layer_id is None: return False
-        return_json = self._net9999Request(method, params)
-        return return_json                   
-        
-    def doScreenDestinationChangeLayerMask(self, screen_id=None, layer_id=None, 
-                                                  left=None, right=None, top=None, 
-                                                  bottom=None):
-        ''' Change Layer Mask $left $right $top $bottom for Screen $screen_id Layer $layer_id '''
-        # Switches on both PGM and PVW... change to check which layer is on PVW/PGM and
-        # switch approprately.
-        # Does not support Split Mode. Should Check if in split mode
-        # and not use absolute_layer_id!
-        
-        absolute_layer_id = layer_id * 2
-        
-        method = "changeContent"
-        params = {"id": screen_id,
-                  "Layers": [{"id": absolute_layer_id,
-                              "Mask": {}}, 
-                             {"id": absolute_layer_id+1,
-                              "Mask": {}}]}
-         
-        if top is not None:
-            params["Layers"][0]["Mask"]["Top"] = source_id
-            params["Layers"][1]["Mask"]["Top"] = source_id
-        
-        if bottom is not None:
-            params["Layers"][0]["Mask"]["Bottom"] = source_id
-            params["Layers"][1]["Mask"]["Bottom"] = source_id
-        
-        if left is not None:
-            params["Layers"][0]["Mask"]["Left"] = source_id
-            params["Layers"][1]["Mask"]["Left"] = source_id
-        
-        if right is not None:
-            params["Layers"][0]["Mask"]["Right"] = source_id
-            params["Layers"][1]["Mask"]["Right"] = source_id
-         
-        if screen_id is None or layer_id is None: return False
-        return_json = self._net9999Request(method, params)
-        return return_json      
-
-    def doScreenDestinationLayerFreeze(self, screen_id=None, layer_id=None):
-        ''' Enable Freeze for Screen $screen_id Layer $layer_id '''
-        # Switches on both PGM and PVW... change to check which layer is on PVW/PGM and
-        # switch approprately.
-        # Does not support Split Mode. Should Check if in split mode
-        # and not use absolute_layer_id!
-        
-        absolute_layer_id = layer_id * 2
-        
-        method = "changeContent"
-        params = {"id": screen_id,
-                  "Layers": [{"id": absolute_layer_id,
-                              "Freeze": 1}, 
-                             {"id": absolute_layer_id+1,
-                              "Freeze": 1}]}
- 
-        if screen_id is None or layer_id is None: return False
-        return_json = self._net9999Request(method, params)
-        return return_json                                                                   
-
-    def doScreenDestinationLayerUnfreeze(self, screen_id=None, layer_id=None):
-        ''' Disable Freeze for Screen $screen_id Layer $layer_id '''
-        # Switches on both PGM and PVW... change to check which layer is on PVW/PGM and
-        # switch approprately.
-        # Does not support Split Mode. Should Check if in split mode
-        # and not use absolute_layer_id!
-        
-        absolute_layer_id = layer_id * 2
-        
-        method = "changeContent"
-        params = {"id": screen_id,
-                  "Layers": [{"id": absolute_layer_id,
-                              "Freeze": 0}, 
-                             {"id": absolute_layer_id+1,
-                              "Freeze": 0}]}
- 
-        if screen_id is None or layer_id is None: return False
-        return_json = self._net9999Request(method, params)
-        return return_json                                                                                                                                                                                                                                                          
+        return return_json                                                                                                                                                                                                                                                 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
     def getDestinations(self):
         ''' Get a list of all Screen Destinations '''
@@ -650,7 +362,7 @@ class EventMasterSwitcher:
         return_json = self._net9999Request(method, params)
         return return_json
         
-        
+     
     ''' Source Methods '''
     
     def getInputs(self):
@@ -671,22 +383,7 @@ class EventMasterSwitcher:
         ''' Get all Sources '''
         method = "listSources"
         return_json = self._net9999Request(method)
-        return return_json        
-
-    def doInputFreezeToggle(self, input_id=None):
-        inputs = self.getInputs()
-        if "error" in inputs:
-            return inputs
-        
-        if inputs['result']['response'] is not list:
-            return {}
-            
-        for input in inputs['result']['response']:
-            if input['id'] is input_id:
-                if input['Freeze']:
-                    return self.doInputUnfreeze(input_id)
-                else:
-                    return self.doInputFreeze(input_id)
+        return return_json   
 
     def doInputFreeze(self, input_id=None):
         ''' Enable Freeze on Input Source $input_id '''
@@ -709,25 +406,6 @@ class EventMasterSwitcher:
         if input_id is None: return False
         return_json = self._net9999Request(method, params)
         return return_json
-        
-    def doBackgroundFreezeToggle(self, background_id=None):
-    
-        if background_id is None:
-            return
-        
-        backgrounds = self.getBackgrounds()
-        if "error" in backgrounds:
-            return backgrounds
-        
-        if backgrounds['result']['response'] is not list:
-            return {}
-            
-        for background in backgrounds['result']['response']:
-            if background['id'] is background_id:
-                if background['Freeze']:
-                    return self.doBackgroundUnfreeze(background_id)
-                else:
-                    return self.doBackgroundFreeze(background_id)
 
     def doBackgroundFreeze(self, background_id=None):
         ''' Enable Freeze On Background Source $background_id '''
@@ -760,8 +438,6 @@ class EventMasterSwitcher:
         cmd = "ATRN"
         if frames is not None:
             cmd += " {0!s}".format(frames)
-            
-        print(cmd)
             
         return_cmd = self._net9878Request(cmd)
         return return_cmd
@@ -833,24 +509,7 @@ class EventMasterSwitcher:
         if preset_id is None: return False
         return_json = self._net9999Request(method, params)
         return return_json
-        
-        
-    ''' Console Layout Methods '''
-
-    '''def getConsoleLayout(self, layout_id=None):
-        # TODO: Convert XML node to JSON and return
-        node = "/System/ConsoleLayoutMgr/ConsoleLayout[@id={0!s}]/*".format(layout_id)
-        if layout_id is None: return False
-        return_node = self._net9878Node(node)
-        
-        return return_node
-
-    def getPresetMgrNode(self):
-        node = "System[@id=0]/PresetMgr[@id=0]/"
-        return_node = self._net9878Node(node)
-        for 
-        return return_node'''
-        
+    
 
     ''' Output Methods '''
     
@@ -902,16 +561,6 @@ class EventMasterSwitcher:
         self._net9878Node(node, set=testpattern_id)
             
         return True
-     
-        
-                
-    #def setOutputDiagMotion(self, output_id=None, diagmotion=None):
-    #    ''' Set a test pattern with ID $testpattern_id for output $output_id '''""
-    #    node = "System/OutCfgMgr/OutputCfg[@id={0!s}]/TestPattern/TestPattern".format(output_id)
-    ##    
-    #    if output_id is None or diagmotion is None: return False
-    #    return_node = self._net9878Node(node, diagmotion)
-    #    return return_node
         
     def getHelp(self):
         return self._net9878Request("HELP")
